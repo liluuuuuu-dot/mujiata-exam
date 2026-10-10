@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+
+  <!-- MindAR Image Tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    canvas {
+      touch-action: none;
+    }
+
+    /* =========================================================
+       1. 开始体验界面
+    ========================================================= */
+
+    #startScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.47);
+      z-index: 9999;
+    }
+
+    #startButton {
+      padding: 16px 32px;
+      font-size: 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    /* =========================================================
+       2. 博物馆信息卡
+    ========================================================= */
+
+    #infoPanel {
+      display: none;
+      position: fixed;
+      left: 20px;
+      bottom: 25px;
+      max-width: 300px;
+      padding: 14px 18px;
+      background: rgba(0, 0, 0, 0.72);
+      color: white;
+      border-radius: 10px;
+      z-index: 5000;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      line-height: 1.6;
+    }
+
+    .objectTitle {
+      font-size: 19px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .objectInfo {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    /* =========================================================
+       3. 开始探索提示
+    ========================================================= */
+
+    #explorePrompt {
+      display: none;
+      position: fixed;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 360px;
+      padding: 15px 20px;
+      background: rgba(0, 0, 0, 0.82);
+      color: white;
+      border-radius: 12px;
+      text-align: center;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      z-index: 6000;
+    }
+
+    .exploreTitle {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .exploreText {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    #exploreButton {
+      margin-top: 12px;
+      padding: 10px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================================================
+       开始体验
+  ========================================================= -->
+
+  <div id="startScreen">
+    <button id="startButton">
+      开始体验
+    </button>
+  </div>
+
+  <!-- =========================================================
+       音频
+  ========================================================= -->
+
+  <audio id="bgMusic" src="./background_music.mp3" preload="auto" loop>
+  </audio>
+
+  <audio id="narration" src="./narration_voice.mp3" preload="auto">
+  </audio>
+
+  <!-- =========================================================
+       博物馆信息卡
+  ========================================================= -->
+
+  <div id="infoPanel">
+    <div class="objectTitle">
+      木吉他
+    </div>
+    <div class="objectInfo">
+     中国传统拉弦乐器｜二弦<br>
+    琴筒、琴杆、琴弓、琴弦<br>
+    音色柔美，常用于独奏与合奏
+    </div>
+  </div>
+
+  <!-- =========================================================
+       开始探索提示
+  ========================================================= -->
+
+  <div id="explorePrompt">
+    <div class="exploreTitle">
+      探索文物
+    </div>
+    <div class="exploreText">
+      拖动模型进行旋转，<br>
+      使用鼠标滚轮或双指捏合进行放大与缩小。
+    </div>
+    <button id="exploreButton">
+      开始探索
+    </button>
+  </div>
+
+  <!-- =========================================================
+       AR SCENE
+  ========================================================= -->
+
+  <a-scene id="scene" mindar-image="imageTargetSrc: ./targets.mind;" color-space="sRGB"
+    renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-camera id="camera" position="0 0 0" look-controls="enabled: false">
+    </a-camera>
+
+    <!-- Image Target -->
+    <a-entity id="target" mindar-image-target="targetIndex: 0">
+
+      <!-- MODEL ROOT：模型总控制节点 -->
+      <a-entity id="modelRoot" position="0 0 0.1" scale="0.1 0.1 0.1">
+
+        <!-- SPIN ROOT：旋转控制节点 -->
+        <a-entity id="spinRoot" animation="
+            property: rotation;
+            from: 0 0 0;
+            to: 0 360 0;
+            loop: true;
+            dur: 10000;
+            easing: linear">
+
+          <!-- 3D 模型 -->
+          <a-gltf-model src="./acoustic_guitar.glb" position="0 0 0" rotation="0 0 0">
+          </a-gltf-model>
+
+        </a-entity>
+        <!-- END spinRoot -->
+
+      </a-entity>
+      <!-- END modelRoot -->
+
+    </a-entity>
+    <!-- END target -->
+
+  </a-scene>
+
+  <script>
+
+    /* =========================================================
+       1. 找到网页元素
+    ========================================================= */
+
+    const scene = document.querySelector("#scene");
+    const startScreen = document.querySelector("#startScreen");
+    const startButton = document.querySelector("#startButton");
+    const target = document.querySelector("#target");
+    const bgMusic = document.querySelector("#bgMusic");
+    const narration = document.querySelector("#narration");
+    const infoPanel = document.querySelector("#infoPanel");
+    const explorePrompt = document.querySelector("#explorePrompt");
+    const exploreButton = document.querySelector("#exploreButton");
+    const modelRoot = document.querySelector("#modelRoot");
+    const spinRoot = document.querySelector("#spinRoot");
+    const camera = document.querySelector("#camera");
+
+    /* =========================================================
+       2. 音量
+    ========================================================= */
+
+    bgMusic.volume = 0.8;
+    narration.volume = 1.0;
+
+    /* =========================================================
+       3. 体验状态
+    ========================================================= */
+
+    let experienceStarted = false;
+    let targetVisible = false;
+    let narrationFinished = false;
+    let exploring = false;
+
+    /* =========================================================
+       4. 开始体验
+    ========================================================= */
+
+    startButton.addEventListener("click", async () => {
+      try {
+        /* 解锁背景音乐 */
+        bgMusic.muted = true;
+        await bgMusic.play();
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+        bgMusic.muted = false;
+
+        /* 解锁中文讲解 */
+        narration.muted = true;
+        await narration.play();
+        narration.pause();
+        narration.currentTime = 0;
+        narration.muted = false;
+      } catch (error) {
+        console.log("Audio unlock:", error);
+      }
+
+      experienceStarted = true;
+      startScreen.style.display = "none";
+
+      if (targetVisible) {
+        playAudio();
+        infoPanel.style.display = "block";
+      }
+    });
+
+    /* =========================================================
+       5. 播放音频
+    ========================================================= */
+
+    function playAudio() {
+      if (!experienceStarted) {
+        return;
+      }
+
+      bgMusic.play().catch((error) => {
+        console.log("Background music error:", error);
+      });
+
+      if (!narrationFinished) {
+        narration.play().catch((error) => {
+          console.log("Narration error:", error);
+        });
+      }
+    }
+
+    /* =========================================================
+       6. 识别到 Target
+    ========================================================= */
+
+    target.addEventListener("targetFound", () => {
+      console.log("🎯 TARGET FOUND");
+      targetVisible = true;
+      playAudio();
+
+      if (experienceStarted) {
+        infoPanel.style.display = "block";
+      }
+
+      if (narrationFinished && !exploring) {
+        explorePrompt.style.display = "block";
+      }
+    });
+
+    /* =========================================================
+       7. Target 离开镜头
+    ========================================================= */
+
+    target.addEventListener("targetLost", () => {
+      console.log("TARGET LOST");
+      targetVisible = false;
+      bgMusic.pause();
+      narration.pause();
+      infoPanel.style.display = "none";
+      explorePrompt.style.display = "none";
+    });
+
+    /* =========================================================
+       8. 中文讲解结束
+    ========================================================= */
+
+    narration.addEventListener("ended", () => {
+      narrationFinished = true;
+      console.log("🔊 Narration Finished");
+
+      if (targetVisible && !exploring) {
+        explorePrompt.style.display = "block";
+      }
+    });
+
+    /* =========================================================
+       9. 开始探索
+    ========================================================= */
+
+    exploreButton.addEventListener("click", () => {
+      exploring = true;
+      explorePrompt.style.display = "none";
+      stopAutoRotation();
+      console.log("🔎 Exploration Started");
+    });
+
+    /* =========================================================
+       10. MODEL SCALE / ROTATION STATE
+    ========================================================= */
+
+    let currentScale = modelRoot.getAttribute("scale").x;
+    let currentRotationY = 0;
+    const initialScale = currentScale;
+    const minScale = initialScale * 0.5;
+    const maxScale = initialScale * 7.0;
+
+    function stopAutoRotation() {
+      currentRotationY = THREE.MathUtils.radToDeg(spinRoot.object3D.rotation.y);
+      spinRoot.removeAttribute("animation");
+      spinRoot.setAttribute("rotation", `0 ${currentRotationY} 0`);
+    }
+
+    function setModelScale(scale) {
+      currentScale = Math.max(minScale, Math.min(maxScale, scale));
+      modelRoot.setAttribute("scale", `${currentScale} ${currentScale} ${currentScale}`);
+    }
+
+    /* =========================================================
+       11. POINTER EVENTS
+    ========================================================= */
+
+    const activePointers = new Map();
+    const pointerStarts = new Map();
+
+    let lastSingleX = null;
+    let pinchStartDistance = null;
+    let pinchStartScale = currentScale;
+    let multiTouchUsed = false;
+
+    const TAP_THRESHOLD = 8;
+
+    function getPointerDistance() {
+      const points = Array.from(activePointers.values());
+      if (points.length < 2) {
+        return 0;
+      }
+      const dx = points[0].x - points[1].x;
+      const dy = points[0].y - points[1].y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    document.addEventListener("pointerdown", (event) => {
+      if (!exploring) {
+        return;
+      }
+
+      if (event.target.closest && event.target.closest("#startScreen, #explorePrompt, #infoPanel")) {
+        return;
+      }
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      pointerStarts.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+        moved: false
+      });
+
+      if (activePointers.size === 1) {
+        lastSingleX = event.clientX;
+        multiTouchUsed = false;
+      }
+
+      if (activePointers.size === 2) {
+        multiTouchUsed = true;
+        pointerStarts.forEach((start) => {
+          start.moved = true;
+        });
+        pinchStartDistance = getPointerDistance();
+        pinchStartScale = currentScale;
+        lastSingleX = null;
+      }
+    });
+
+    document.addEventListener("pointermove", (event) => {
+      if (!exploring || !activePointers.has(event.pointerId)) {
+        return;
+      }
+
+      const start = pointerStarts.get(event.pointerId);
+
+      if (start) {
+        const totalDx = event.clientX - start.x;
+        const totalDy = event.clientY - start.y;
+        if (Math.hypot(totalDx, totalDy) > TAP_THRESHOLD) {
+          start.moved = true;
+        }
+      }
+
+      activePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      });
+
+      if (activePointers.size === 1 && lastSingleX !== null) {
+        const dx = event.clientX - lastSingleX;
+        currentRotationY += dx * 0.4;
+        spinRoot.setAttribute("rotation", `0 ${currentRotationY} 0`);
+        lastSingleX = event.clientX;
+      }
+
+      if (activePointers.size === 2 && pinchStartDistance) {
+        event.preventDefault();
+        const newDistance = getPointerDistance();
+        const ratio = newDistance / pinchStartDistance;
+        setModelScale(pinchStartScale * ratio);
+      }
+    }, { passive: false });
+
+    function endPointer(event) {
+      activePointers.delete(event.pointerId);
+      pointerStarts.delete(event.pointerId);
+
+      if (activePointers.size === 1) {
+        const remainingPointer = Array.from(activePointers.values())[0];
+        lastSingleX = remainingPointer.x;
+      } else {
+        lastSingleX = null;
+      }
+
+      if (activePointers.size < 2) {
+        pinchStartDistance = null;
+      }
+
+      if (activePointers.size === 0) {
+        multiTouchUsed = false;
+      }
+    }
+
+    document.addEventListener("pointerup", endPointer);
+    document.addEventListener("pointercancel", endPointer);
+
+    /* =========================================================
+       12. 电脑滚轮缩放
+    ========================================================= */
+
+    document.addEventListener("wheel", (event) => {
+      if (!exploring) {
+        return;
+      }
+      event.preventDefault();
+      if (event.deltaY < 0) {
+        setModelScale(currentScale * 1.10);
+      } else {
+        setModelScale(currentScale * 0.90);
+      }
+    }, { passive: false });
+
+  </script>
+
+</body>
+
+</html>
